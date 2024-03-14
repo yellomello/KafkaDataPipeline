@@ -1,13 +1,12 @@
 import time
-import requests
+import json
 from confluent_kafka import Producer
+from data_source_movie_by_day import dataSourceMovieByDay
+from data_source_movie_by_list import dataSourceMovieByList
+from fetch_all_articles_for_movie import fetchAllArticlesForMovie
 
 # Replace with your Kafka bootstrap server
 bootstrap_servers = "localhost:9092"
-
-names_url = 'http://localhost:8100/api/names'
-coins_url = 'http://localhost:8100/api/beta/whole/50/50'
-values_url = 'http://localhost:8100/api/gaussian/whole/10/5'
 
 # Create a Kafka producer
 kafka_producer = Producer({'bootstrap.servers': bootstrap_servers})
@@ -16,41 +15,39 @@ kafka_producer = Producer({'bootstrap.servers': bootstrap_servers})
 def produce_message(topic, message):
     kafka_producer.produce(topic=topic, value=message.encode())
 
-# Fetch data from the API and produce to the 'names' topic
-def fetch_names():
-    response = requests.get(names_url)
-    name = response.json()['names']
-    print(name)
-    produce_message("names", name)
+def fetchMovieByListNewsData():
+    movieByListNewsData = dataSourceMovieByList()
+    print(movieByListNewsData)
+    produce_message("movieByListNews", movieByListNewsData)
 
-# Fetch data from the API and produce to the 'values' topic
-def fetch_values():
-    response = requests.get(values_url)
-    value =  response.json()['values'][0]
-    print(value)
-    produce_message("values", value)
+def fetchMovieByDayNewsData():
+    movieByDayNewsData = dataSourceMovieByDay()
+    print(movieByDayNewsData)
+    produce_message("movieByDayNews", movieByDayNewsData)
 
-# Fetch data from the API and produce to the 'coins' topic
-def fetch_coins():
-    response = requests.get(coins_url)
-    coin = response.json()["values"][0]
-    print(coin)
-    if coin == 0:
-        produce_message(f"coins", "heads")
-    else:
-        produce_message(f"coins", "tails")
+def fetchNewsDataForAMovie(topic, movie):
+    allArticlesForMovie = fetchAllArticlesForMovie(movie)
+    produce_message(topic, allArticlesForMovie)
 
 # Function to handle producing messages
 def produce_message(topic, message):
-    if not isinstance(message, str):
-        message = str(message)
-    kafka_producer.produce(topic=topic, value=message.encode())
+    # Serialize the list of objects into a JSON string
+    json_message = json.dumps(message)
+
+    # Produce the message to the topic
+    kafka_producer.produce(topic=topic, value=json_message.encode())
 
 # Call the functions to fetch and produce data
-while True:
-    fetch_names()
-    fetch_coins()
-    fetch_values()
-    # Wait for all messages to be sent
+# while True:
+#     fetchMovieByDayNewsData()
+#     fetchMovieByListNewsData()
+#     kafka_producer.flush()
+#     time.sleep(2)
+
+#Call the functions to fetch and produce data
+dictMovies = {'deadpoolAndWolverine': 'Deadpool & Wolverine', 'dunePartTwo': 'Dune: Part Two', 'kungFuPanda4': 'Kung Fu Panda 4', 'oppenheimer': 'Oppenheimer'}
+
+for topic, movie in dictMovies.items():
+    fetchNewsDataForAMovie(topic, movie)
     kafka_producer.flush()
     time.sleep(2)
