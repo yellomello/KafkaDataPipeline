@@ -1,4 +1,4 @@
-# Kafka to PostgreSQL Data Pipeline
+# Kafka to PostgreSQL Data Pipeline (Marc)
 
 This project demonstrates a simple data pipeline that consumes messages from Kafka topics and inserts the data into a PostgreSQL database. The Kafka topics used in this example are names, values, and coins.
 
